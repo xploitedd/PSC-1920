@@ -1,5 +1,6 @@
 #include "libbooks.h"
 #include<stdio.h>
+#include<string.h>
 
 typedef size_t (*requestCallback)(char *ptr, size_t size, size_t nmemb, void *userdata);
 
@@ -12,6 +13,10 @@ typedef struct BufferData {
 
 static CURL *curl;
 
+/**
+ * books_init
+ * initializes the library and needed resources
+ */
 void books_init() {
     curl = curl_easy_init();
     if (curl) {
@@ -21,11 +26,15 @@ void books_init() {
     }
 }
 
+/**
+ * books_free
+ * free the resources used by the library
+ */
 void books_free() {
     curl_easy_cleanup(curl);
 }
 
-int doCurlRequest(const char *uri, void *data, requestCallback callback) {
+int do_curl_request(const char *uri, void *data, requestCallback callback) {
     if (curl) {
         curl_easy_setopt(curl, CURLOPT_URL, uri);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, data);
@@ -37,16 +46,16 @@ int doCurlRequest(const char *uri, void *data, requestCallback callback) {
     return 0;
 }
 
-size_t jsonRequestCallback(char *ptr, size_t size, size_t nmemb, Buffer *buf) {
+size_t json_request_callback(char *ptr, size_t size, size_t nmemb, Buffer *buf) {
     size_t totalSize = size * nmemb;
-    char *newBuf = realloc(buf->jsonBuffer, buf->currentSize + totalSize);
+    char *newBuf = realloc(buf->jsonBuffer, buf->currentSize + totalSize + 1);
     if (newBuf == NULL)
         return 0;
 
-    for (int i = 0; i < totalSize; ++i)
-        buf->jsonBuffer[buf->currentSize + i] = ptr[i];
-
+    buf->jsonBuffer = newBuf;
+    memcpy(&(buf->jsonBuffer[buf->currentSize]), ptr, totalSize);
     buf->currentSize += totalSize;
+    buf->jsonBuffer[buf->currentSize] = 0;
     return totalSize;
 }
 
@@ -55,7 +64,7 @@ int httpGetToFile(const char *uri, const char *filename) {
     if (!file)
         return 0;
 
-    int res = doCurlRequest(uri, file, (requestCallback) fwrite);
+    int res = do_curl_request(uri, file, (requestCallback) fwrite);
     fclose(file);
     return res == CURLE_OK ? 1 : 0;
 }
@@ -67,14 +76,19 @@ struct json_object *httpGetJsonData(const char *uri) {
         return NULL;
 
     Buffer buf = { 0, jsonBuffer };
-    int err = doCurlRequest(uri, &buf, (requestCallback) jsonRequestCallback);
+    int err = do_curl_request(uri, &buf, (requestCallback) json_request_callback);
     if (err != CURLE_OK) {
         fprintf(stderr, "An error occurred: %s\n", curl_easy_strerror(err));
         return NULL;
     }
 
-    json_object *json = json_tokener_parse(jsonBuffer);
-    free(jsonBuffer);
+    json_object *json = json_tokener_parse(buf.jsonBuffer);
+    if (json == NULL) {
+        fprintf(stderr, "Invalid json response!");
+        return NULL;
+    }
+
+    free(buf.jsonBuffer);
     return json;
 }
 
