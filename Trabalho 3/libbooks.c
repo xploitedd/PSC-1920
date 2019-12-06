@@ -93,18 +93,89 @@ struct json_object *httpGetJsonData(const char *uri) {
 }
 
 int googleBooksSearchByAuthor(const char *apikey, const char *author, Collection *res) {
+    if (res == NULL) return -1;
     char *encodedAuthor = curl_easy_escape(curl, author, 0);
-    char uri[512];
-    sprintf(uri, "https://www.googleapis.com/books/v1/volumes?apikey=%s&q=inauthor:%%22%s%%22",
-        apikey, encodedAuthor);
+    for (int i = 0; ; ) {
+        char uri[512];
+        sprintf(uri, "https://www.googleapis.com/books/v1/volumes?filter=full&maxResults=40&apikey=%s&q=inauthor:%%22%s%%22&startIndex=%d",
+            apikey, encodedAuthor, i);
+
+        json_object *json = httpGetJsonData(uri);
+        if (json == NULL)
+            return -1;
+
+        // get the volume count
+        // update the volume count each iteration so that if
+        // a new book is added while running it works
+        json_object *totalItemsJson;
+        json_object_object_get_ex(json, "totalItems", &totalItemsJson);
+        int totalItems = json_object_get_int(totalItemsJson);
+        if (i >= totalItems)
+            break;
+
+        if (res->volumes == NULL) {
+            // put the volume information into the collection
+            res->volume_count = totalItems;
+            res->volumes = calloc(totalItems, sizeof(Volume));
+        } else if (res->volume_count != totalItems) {
+            int dif = totalItems - res->volume_count;
+            if (dif > 0) {
+                Volume *ptr = realloc(res->volumes, totalItems * sizeof(Volume));
+                if (ptr == NULL)
+                    return -1;
+
+                res->volume_count = totalItems;
+                res->volumes = ptr;
+            }
+        }
+        
+        json_object *items;
+        json_object_object_get_ex(json, "items", &items);
+        size_t offset = json_object_array_length(items);
+        i += offset;
+
+        for (int j = 0; j < offset; ++j) {
+            json_object *volumeObj = json_object_array_get_idx(items, j);
+            json_object *volumeIdObj;
+            json_object *titleObj;
+            json_object *identifierObj;
+            json_object *publishedDateObj;
+            json_object *pdfAvailableObj;
+
+            json_object_object_get_ex(volumeObj, "id", &volumeIdObj);
+
+            json_object *volumeInfo;
+            json_object_object_get_ex(volumeObj, "volumeInfo", &volumeInfo);
+            json_object_object_get_ex(volumeInfo, "title", &titleObj);
+            json_object_object_get_ex(volumeInfo, "publishedDate", &publishedDateObj);
+            
+            json_object *industryIdentifiers;
+            json_object_object_get_ex(volumeInfo, "industryIdentifiers", &industryIdentifiers);
+            // get the first identifier
+            json_object *ii_first = json_object_array_get_idx(industryIdentifiers, 0);
+            json_object_object_get_ex(ii_first, "identifier", &identifierObj);
+
+            json_object *accessInfo;
+            json_object_object_get_ex(volumeObj, "accessInfo", &accessInfo);
+            json_object *pdfObj;
+            json_object_object_get_ex(accessInfo, "pdf", &pdfObj);
+            json_object_object_get_ex(pdfObj, "isAvailable", &pdfAvailableObj);
+
+            res->volumes[j].volumeId = (char *) json_object_get_string(volumeIdObj);
+            res->volumes[j].title = (char *) json_object_get_string(titleObj);
+            res->volumes[j].isbn = (char *) json_object_get_string(identifierObj);
+            res->volumes[j].publishedDate = (char *) json_object_get_string(publishedDateObj);
+            res->volumes[j].pdfAvailable = json_object_get_boolean(pdfAvailableObj);
+        }
+        
+        json_object_put(json);
+    }
 
     curl_free(encodedAuthor);
+    return res->volume_count;
+}
 
-    json_object *json = httpGetJsonData(uri);
-    puts(json_object_to_json_string_ext(json, 
-        JSON_C_TO_STRING_SPACED | 
-        JSON_C_TO_STRING_PRETTY_TAB));
-
-    json_object_put(json);
-    return -1;
+void free_collection(Collection *cl) {
+    if (cl != NULL)
+        free(cl->volumes);
 }

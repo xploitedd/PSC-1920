@@ -24,5 +24,6 @@ void books_free();
 int httpGetToFile(const char *uri, const char *filename);
 struct json_object *httpGetJsonData(const char *uri);
 int googleBooksSearchByAuthor(const char *apikey, const char *author, Collection *res);
+void free_collection(Collection *cl);
 
 #endif

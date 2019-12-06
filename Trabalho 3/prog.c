@@ -11,7 +11,10 @@ void test_http_get_to_file() {
 
 int main(int argc, char *argv[]) {
     books_init();
-    googleBooksSearchByAuthor("AIzaSyDQcIpcRauamoUdu0s9AYKSyPJX7VjAfr8", "Alexandre Herculano", NULL);
+    Collection col = { 0, NULL };
+    int s = googleBooksSearchByAuthor("AIzaSyDQcIpcRauamoUdu0s9AYKSyPJX7VjAfr8", "Alexandre Herculano", &col);
+    //printf("%s\n", col.volumes[0].title);
+    free_collection(&col);
     books_free();
     return 0;
 }
