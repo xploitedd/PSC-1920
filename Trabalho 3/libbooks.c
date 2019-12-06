@@ -3,8 +3,12 @@
 
 typedef size_t (*requestCallback)(char *ptr, size_t size, size_t nmemb, void *userdata);
 
-static const int MAX_BUFFER_SIZE = 1024 * 1024 * 4;
-static int currentBufferSize = 0;
+static const int INITIAL_BUFFER_SIZE = 1024 * 4; // 4kb
+
+typedef struct BufferData {
+    size_t currentSize;
+    char *jsonBuffer;
+} Buffer;
 
 static CURL *curl;
 
@@ -33,17 +37,17 @@ int doCurlRequest(const char *uri, void *data, requestCallback callback) {
     return 0;
 }
 
-size_t jsonRequestCallback(char *ptr, size_t size, size_t nmemb, char *buf) {
-    int totalSize = size * nmemb;
-    if (MAX_BUFFER_SIZE - currentBufferSize >= totalSize) {
-        for (int i = 0; i < totalSize; ++i)
-            buf[currentBufferSize + i] = ptr[i];
+size_t jsonRequestCallback(char *ptr, size_t size, size_t nmemb, Buffer *buf) {
+    size_t totalSize = size * nmemb;
+    char *newBuf = realloc(buf->jsonBuffer, buf->currentSize + totalSize);
+    if (newBuf == NULL)
+        return 0;
 
-        currentBufferSize += totalSize;
-        return totalSize;
-    }
+    for (int i = 0; i < totalSize; ++i)
+        buf->jsonBuffer[buf->currentSize + i] = ptr[i];
 
-    return 0;
+    buf->currentSize += totalSize;
+    return totalSize;
 }
 
 int httpGetToFile(const char *uri, const char *filename) {
@@ -58,10 +62,12 @@ int httpGetToFile(const char *uri, const char *filename) {
 
 struct json_object *httpGetJsonData(const char *uri) {
     // allocate a json buffer
-    char *jsonBuffer = calloc(MAX_BUFFER_SIZE / 8, 8);
-    currentBufferSize = 0;
+    char *jsonBuffer = calloc(INITIAL_BUFFER_SIZE, 1);
+    if (jsonBuffer == NULL)
+        return NULL;
 
-    int err = doCurlRequest(uri, jsonBuffer, (requestCallback) jsonRequestCallback);
+    Buffer buf = { 0, jsonBuffer };
+    int err = doCurlRequest(uri, &buf, (requestCallback) jsonRequestCallback);
     if (err != CURLE_OK) {
         fprintf(stderr, "An error occurred: %s\n", curl_easy_strerror(err));
         return NULL;
