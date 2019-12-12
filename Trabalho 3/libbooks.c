@@ -99,7 +99,7 @@ int googleBooksSearchByAuthor(const char *apikey, const char *author, Collection
         char uri[512];
         sprintf(uri, "https://www.googleapis.com/books/v1/volumes?filter=full&maxResults=40&apikey=%s&q=inauthor:%%22%s%%22&startIndex=%d",
             apikey, encodedAuthor, i);
-
+            
         json_object *json = httpGetJsonData(uri);
         if (json == NULL)
             return -1;
@@ -110,8 +110,10 @@ int googleBooksSearchByAuthor(const char *apikey, const char *author, Collection
         json_object *totalItemsJson;
         json_object_object_get_ex(json, "totalItems", &totalItemsJson);
         int totalItems = json_object_get_int(totalItemsJson);
-        if (i >= totalItems)
+        if (i >= totalItems) {
+            json_object_put(json);
             break;
+        }
 
         if (res->volumes == NULL) {
             // put the volume information into the collection
@@ -132,7 +134,6 @@ int googleBooksSearchByAuthor(const char *apikey, const char *author, Collection
         json_object *items;
         json_object_object_get_ex(json, "items", &items);
         size_t offset = json_object_array_length(items);
-        i += offset;
 
         for (int j = 0; j < offset; ++j) {
             json_object *volumeObj = json_object_array_get_idx(items, j);
@@ -161,14 +162,30 @@ int googleBooksSearchByAuthor(const char *apikey, const char *author, Collection
             json_object_object_get_ex(accessInfo, "pdf", &pdfObj);
             json_object_object_get_ex(pdfObj, "isAvailable", &pdfAvailableObj);
 
-            res->volumes[j].volumeId = (char *) json_object_get_string(volumeIdObj);
-            res->volumes[j].title = (char *) json_object_get_string(titleObj);
-            res->volumes[j].isbn = (char *) json_object_get_string(identifierObj);
-            res->volumes[j].publishedDate = (char *) json_object_get_string(publishedDateObj);
-            res->volumes[j].pdfAvailable = json_object_get_boolean(pdfAvailableObj);
+            // need to create own memory blocks since json will release upon
+            // put method call
+            Volume *vol = &res->volumes[i + j];
+            const char *volumeId = json_object_get_string(volumeIdObj);
+            vol->volumeId = calloc(strlen(volumeId) + 1, 1);
+            strcpy(vol->volumeId, volumeId);
+
+            const char *title = json_object_get_string(titleObj);
+            vol->title = calloc(strlen(title) + 1, 1);
+            strcpy(vol->title, title);
+
+            const char *identifier = json_object_get_string(identifierObj);
+            vol->isbn = calloc(strlen(identifier) + 1, 1);
+            strcpy(vol->isbn, identifier);
+
+            const char *publishedDate = json_object_get_string(publishedDateObj);
+            vol->publishedDate = calloc(strlen(publishedDate) + 1, 1);
+            strcpy(vol->publishedDate, publishedDate);
+
+            vol->pdfAvailable = json_object_get_boolean(pdfAvailableObj);
         }
         
         json_object_put(json);
+        i += offset;
     }
 
     curl_free(encodedAuthor);
@@ -176,6 +193,15 @@ int googleBooksSearchByAuthor(const char *apikey, const char *author, Collection
 }
 
 void free_collection(Collection *cl) {
-    if (cl != NULL)
+    if (cl != NULL) {
+        for (int i = 0; i < cl->volume_count; ++i) {
+            Volume *vol = &cl->volumes[i];
+            free(vol->volumeId);
+            free(vol->title);
+            free(vol->isbn);
+            free(vol->publishedDate);
+        }
+
         free(cl->volumes);
+    }
 }

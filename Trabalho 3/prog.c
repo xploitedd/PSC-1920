@@ -12,8 +12,19 @@ void test_http_get_to_file() {
 int main(int argc, char *argv[]) {
     books_init();
     Collection col = { 0, NULL };
-    int s = googleBooksSearchByAuthor("AIzaSyDQcIpcRauamoUdu0s9AYKSyPJX7VjAfr8", "Alexandre Herculano", &col);
-    //printf("%s\n", col.volumes[0].title);
+    int err = googleBooksSearchByAuthor("AIzaSyDQcIpcRauamoUdu0s9AYKSyPJX7VjAfr8", "Edgar Allan Poe", &col);
+    printf("Error ? %d Count: %ld\n", err, col.volume_count);
+    for (int i = 0; i < col.volume_count; ++i) {
+        Volume vol = col.volumes[i];
+        printf("------------------------------------\n");
+        printf("Idx:            %d\n", i);
+        printf("Id:             %s\n", vol.volumeId);
+        printf("Title:          %s\n", vol.title);
+        printf("Published Date: %s\n", vol.publishedDate);
+        printf("ISBN:           %s\n", vol.isbn);
+        printf("PDF Available:  %d\n", vol.pdfAvailable);
+    }
+
     free_collection(&col);
     books_free();
     return 0;
