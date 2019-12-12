@@ -15,8 +15,8 @@ prog: $(OBJDIR)/prog.o libbooks
 libbooks: $(OBJDIR)/libbooks.o
 	gcc -Wall -g -shared $(OBJDIR)/libbooks.o -o libbooks.so
 
-$(OBJDIR)/prog.o: prog.c
+$(OBJDIR)/prog.o: prog.c libbooks.h
 	gcc -Wall -g -c prog.c -o $(OBJDIR)/prog.o
 
-$(OBJDIR)/libbooks.o: libbooks.c
+$(OBJDIR)/libbooks.o: libbooks.c libbooks.h
 	gcc -Wall -g -c -fPIC libbooks.c -o $(OBJDIR)/libbooks.o
