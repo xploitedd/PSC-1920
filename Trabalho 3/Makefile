@@ -9,7 +9,7 @@ clean:
 $(OBJDIR):
 	mkdir -p $(OBJDIR)
 
-prog: $(OBJDIR)/prog.o libbooks
+prog: $(OBJDIR)/prog.o libbooks libbooks.h
 	gcc -Wall -g $(OBJDIR)/prog.o ./libbooks.so -o prog -lcurl -ljson-c
 
 libbooks: $(OBJDIR)/libbooks.o
