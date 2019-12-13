@@ -25,6 +25,15 @@ int main(int argc, char *argv[]) {
         printf("PDF Available:  %d\n", vol.pdfAvailable);
     }
 
+    char *pdf = calloc(100, 1);
+    char *thumbnail = calloc(100, 1);
+
+    err = googleBooksGetUrls("AIzaSyDQcIpcRauamoUdu0s9AYKSyPJX7VjAfr8", "6f9SDwAAQBAJ", thumbnail, 100, pdf, 100);
+    printf("pdf url: %s thumbnail: %s\n", pdf, thumbnail);
+    free(pdf);
+    free(thumbnail);
+    fprintf(stderr, "Error: %d\n", err);
+
     free_collection(&col);
     books_free();
     return 0;

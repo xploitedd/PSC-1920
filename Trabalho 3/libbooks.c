@@ -1,10 +1,11 @@
 #include "libbooks.h"
+#include<stdlib.h>
 #include<stdio.h>
 #include<string.h>
 
 typedef size_t (*requestCallback)(char *ptr, size_t size, size_t nmemb, void *userdata);
 
-static const int INITIAL_BUFFER_SIZE = 1024 * 4; // 4kb
+static const size_t INITIAL_BUFFER_SIZE = 1024 * 4; // 4kb
 
 typedef struct BufferData {
     size_t currentSize;
@@ -84,7 +85,7 @@ struct json_object *httpGetJsonData(const char *uri) {
 
     json_object *json = json_tokener_parse(buf.jsonBuffer);
     if (json == NULL) {
-        fprintf(stderr, "Invalid json response!");
+        fprintf(stderr, "Invalid json response!\n");
         return NULL;
     }
 
@@ -190,6 +191,42 @@ int googleBooksSearchByAuthor(const char *apikey, const char *author, Collection
 
     curl_free(encodedAuthor);
     return res->volume_count;
+}
+
+int googleBooksGetUrls(const char *apikey, const char *volumeId,
+                       char *thumb_url, size_t thumb_len,
+                       char *pdf_url,   size_t pdf_len)
+{
+    char uri[512];
+    sprintf(uri, "https://www.googleapis.com/books/v1/volumes/%s?apikey=%s?projection=lite",
+        volumeId, apikey);
+
+    json_object *json = httpGetJsonData(uri);
+    if (json == NULL)
+        return -1;
+
+    // get thumbnail url
+    json_object *volumeInfo;
+    json_object_object_get_ex(json, "volumeInfo", &volumeInfo);
+    json_object *imageLinks;
+    json_object_object_get_ex(volumeInfo, "imageLinks", &imageLinks);
+    json_object *thumbnail;
+    json_object_object_get_ex(imageLinks, "thumbnail", &thumbnail);
+    strncpy(thumb_url, json_object_get_string(thumbnail), thumb_len);
+
+    json_object *accessInfo;
+    json_object_object_get_ex(json, "accessInfo", &accessInfo);
+    json_object *pdf;
+    json_object_object_get_ex(accessInfo, "pdf", &pdf);
+    json_object *downloadLink;
+    if (!json_object_object_get_ex(pdf, "downloadLink", &downloadLink)) {
+        json_object_put(json);
+        return ERR_PDF_NOT_FOUND;
+    }
+
+    strncpy(pdf_url, json_object_get_string(downloadLink), pdf_len);
+    json_object_put(json);
+    return 0;
 }
 
 void free_collection(Collection *cl) {
