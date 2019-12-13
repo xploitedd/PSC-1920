@@ -23,6 +23,7 @@ int main(int argc, char *argv[]) {
         printf("Published Date: %s\n", vol.publishedDate);
         printf("ISBN:           %s\n", vol.isbn);
         printf("PDF Available:  %d\n", vol.pdfAvailable);
+        printf("EPUB Available:  %d\n", vol.epubAvailable);
     }
 
     free_collection(&col);

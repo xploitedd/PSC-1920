@@ -142,6 +142,7 @@ int googleBooksSearchByAuthor(const char *apikey, const char *author, Collection
             json_object *identifierObj;
             json_object *publishedDateObj;
             json_object *pdfAvailableObj;
+            json_object *epubAvailableObj;
 
             json_object_object_get_ex(volumeObj, "id", &volumeIdObj);
 
@@ -161,6 +162,9 @@ int googleBooksSearchByAuthor(const char *apikey, const char *author, Collection
             json_object *pdfObj;
             json_object_object_get_ex(accessInfo, "pdf", &pdfObj);
             json_object_object_get_ex(pdfObj, "isAvailable", &pdfAvailableObj);
+            json_object *epubObj;
+            json_object_object_get_ex(accessInfo, "epub", &epubObj);
+            json_object_object_get_ex(epubObj, "isAvailable", &epubAvailableObj);
 
             // need to create own memory blocks since json will release upon
             // put method call
@@ -182,6 +186,7 @@ int googleBooksSearchByAuthor(const char *apikey, const char *author, Collection
             strcpy(vol->publishedDate, publishedDate);
 
             vol->pdfAvailable = json_object_get_boolean(pdfAvailableObj);
+            vol->epubAvailable = json_object_get_boolean(epubAvailableObj);
         }
         
         json_object_put(json);

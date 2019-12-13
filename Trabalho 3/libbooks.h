@@ -11,6 +11,7 @@ typedef struct volume {
     char *isbn;
     char *publishedDate;
     bool pdfAvailable;
+    bool epubAvailable;
 } Volume;
 
 typedef struct collection {
