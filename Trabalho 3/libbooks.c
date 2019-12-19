@@ -149,12 +149,12 @@ int googleBooksSearchByAuthor(const char *apikey, const char *author, Collection
             // put the volume information into the collection
             res->volume_count = totalItems;
             res->volumes = calloc(totalItems, sizeof(Volume));
-        } else {
-            // check if we have all the results
-            if (i >= res->volume_count) {
-                json_object_put(json);
-                break;
-            }
+        }
+
+        // check if we have all the results
+        if (i >= res->volume_count) {
+            json_object_put(json);
+            break;
         }
         
         json_object *items;
@@ -240,7 +240,7 @@ int googleBooksGetUrls(const char *apikey, const char *volumeId,
                        char *pdf_url,   size_t pdf_len)
 {
     char uri[512];
-    sprintf(uri, "https://www.googleapis.com/books/v1/volumes/%s?key=%s?projection=lite&fields=volumeInfo(imageLinks),accessInfo(pdf)",
+    sprintf(uri, "https://www.googleapis.com/books/v1/volumes/%s?key=%s&projection=lite&fields=volumeInfo(imageLinks),accessInfo(pdf)",
         volumeId, apikey);
 
     json_object *json = httpGetJsonData(uri);
