@@ -44,11 +44,13 @@ int main(int argc, char *argv[]) {
 
             int err = googleBooksGetUrls(apikey, res.volumes[i].volumeId, thumb_url, url_len, pdf_url, url_len, epub_url, url_len);
             if (err == -1) continue;
-
+            Volume vol = res.volumes[i];
             printf("------------------------------------------------------------------------\n");
-            printf("Title:     %s\n", res.volumes[i].title);
-            printf("pdf url:   %s\n", pdf_url);
-            printf("epub url:   %s\n", epub_url);
+            printf("Title:     %s\n", vol.title);
+            printf("PDF Available:  %d\n", vol.pdfAvailable);
+            printf("PDF url:   %s\n", pdf_url);
+            printf("EPUB Available:  %d\n", vol.epubAvailable);
+            printf("EPUB url:   %s\n", epub_url);
             printf("thumb url: %s\n", thumb_url);
 
             free(pdf_url);

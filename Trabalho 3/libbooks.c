@@ -240,6 +240,7 @@ int googleBooksSearchByAuthor(const char *apikey, const char *author, Collection
 int googleBooksGetUrls(const char *apikey, const char *volumeId, char *thumb_url, 
                        size_t thumb_len, char *pdf_url,   size_t pdf_len, char *epub_url, size_t epub_len)
 {
+    int err = 0;
     char uri[512];
     sprintf(uri, "https://www.googleapis.com/books/v1/volumes/%s?key=%s&projection=lite&fields=volumeInfo(imageLinks),accessInfo(pdf,epub)",
         volumeId, apikey);
@@ -264,7 +265,7 @@ int googleBooksGetUrls(const char *apikey, const char *volumeId, char *thumb_url
     json_object *downloadLink;
     if (!json_object_object_get_ex(pdf, "downloadLink", &downloadLink)) {
         json_object_put(json);
-        return ERR_PDF_NOT_FOUND;
+        return err+=ERR_PDF_NOT_FOUND;
     }
     
     json_object *epub;
@@ -272,13 +273,13 @@ int googleBooksGetUrls(const char *apikey, const char *volumeId, char *thumb_url
     json_object *downloadLinkE;
     if (!json_object_object_get_ex(epub, "downloadLink", &downloadLinkE)) {
         json_object_put(json);
-        return ERR_EPUB_NOT_FOUND;
+        return err+=ERR_EPUB_NOT_FOUND;
     }
 
     strncpy(pdf_url, json_object_get_string(downloadLink), pdf_len);
     strncpy(epub_url, json_object_get_string(downloadLinkE), epub_len);
     json_object_put(json);
-    return 0;
+    return err;
 }
 
 /**
