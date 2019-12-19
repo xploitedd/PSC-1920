@@ -32,6 +32,12 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
+    FILE *template = fopen("template.html", "r");
+    if (template == NULL) {
+        fprintf(stderr, "Template file <template.html> not found!");
+        return -1;
+    }
+
     books_init();
     Collection res = { 0, NULL };
     if (googleBooksSearchByAuthor(apikey, authorName, &res) > 0) {
@@ -54,6 +60,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    fclose(template);
     free_collection(&res);
     books_free();
     return 0;
