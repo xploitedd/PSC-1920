@@ -23,6 +23,7 @@ int main(int argc, char *argv[]) {
         authorName[current - 1] = ' ';
     }
 
+    authorName[authorSize - 1] = 0;
     printf("Author Name: %s\n", authorName);
 
     char *apikey = getenv("GBOOKS_API_KEY");
