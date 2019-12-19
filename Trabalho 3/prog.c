@@ -27,10 +27,12 @@ int main(int argc, char *argv[]) {
     }
 
         char *pdf = calloc(100, 1);
+        char *epub = calloc(100, 1);
     char *thumbnail = calloc(100, 1);
 
-    err = googleBooksGetUrls("AIzaSyDQcIpcRauamoUdu0s9AYKSyPJX7VjAfr8", "6f9SDwAAQBAJ", thumbnail, 100, pdf, 100);
+    err = googleBooksGetUrls("AIzaSyDQcIpcRauamoUdu0s9AYKSyPJX7VjAfr8", "6f9SDwAAQBAJ", thumbnail, 100, pdf, 100,epub,100);
     printf("pdf url: %s thumbnail: %s\n", pdf, thumbnail);
+    free(epub);
     free(pdf);
     free(thumbnail);
     fprintf(stderr, "Error: %d\n", err);

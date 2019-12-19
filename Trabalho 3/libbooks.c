@@ -233,14 +233,15 @@ int googleBooksSearchByAuthor(const char *apikey, const char *author, Collection
  * @param thumb_len max length of the thumbnail url
  * @param pdf_url pointer where to copy the pdf url to
  * @param pdf_len max length of the pdf url
+ * @param epub_url pointer where to copy the epub url to
+ * @param epub_len max length of the epub url
  * @return zero if no errors, otherwise returns the error code
  */
-int googleBooksGetUrls(const char *apikey, const char *volumeId,
-                       char *thumb_url, size_t thumb_len,
-                       char *pdf_url,   size_t pdf_len)
+int googleBooksGetUrls(const char *apikey, const char *volumeId, char *thumb_url, 
+                       size_t thumb_len, char *pdf_url,   size_t pdf_len, char *epub_url, size_t epub_len)
 {
     char uri[512];
-    sprintf(uri, "https://www.googleapis.com/books/v1/volumes/%s?key=%s&projection=lite&fields=volumeInfo(imageLinks),accessInfo(pdf)",
+    sprintf(uri, "https://www.googleapis.com/books/v1/volumes/%s?key=%s&projection=lite&fields=volumeInfo(imageLinks),accessInfo(pdf,epub)",
         volumeId, apikey);
 
     json_object *json = httpGetJsonData(uri);
@@ -265,8 +266,17 @@ int googleBooksGetUrls(const char *apikey, const char *volumeId,
         json_object_put(json);
         return ERR_PDF_NOT_FOUND;
     }
+    
+    json_object *epub;
+    json_object_object_get_ex(accessInfo, "epub", &epub);
+    json_object *downloadLinkE;
+    if (!json_object_object_get_ex(epub, "downloadLink", &downloadLinkE)) {
+        json_object_put(json);
+        return ERR_EPUB_NOT_FOUND;
+    }
 
     strncpy(pdf_url, json_object_get_string(downloadLink), pdf_len);
+    strncpy(epub_url, json_object_get_string(downloadLinkE), epub_len);
     json_object_put(json);
     return 0;
 }

@@ -39,17 +39,20 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i < res.volume_count; ++i) {
             size_t url_len = 128;
             char *pdf_url = calloc(url_len, 1);
+            char *epub_url = calloc(url_len, 1);
             char *thumb_url = calloc(url_len, 1);
 
-            int err = googleBooksGetUrls(apikey, res.volumes[i].volumeId, thumb_url, url_len, pdf_url, url_len);
+            int err = googleBooksGetUrls(apikey, res.volumes[i].volumeId, thumb_url, url_len, pdf_url, url_len, epub_url, url_len);
             if (err == -1) continue;
 
             printf("------------------------------------------------------------------------\n");
-            printf("title:     %s\n", res.volumes[i].title);
+            printf("Title:     %s\n", res.volumes[i].title);
             printf("pdf url:   %s\n", pdf_url);
+            printf("epub url:   %s\n", epub_url);
             printf("thumb url: %s\n", thumb_url);
 
             free(pdf_url);
+            free(epub_url);
             free(thumb_url);
         }
     }
