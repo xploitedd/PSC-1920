@@ -4,13 +4,14 @@
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        fprintf(stderr, "Error: please provide an author name!\nExample: %s <author_name>\n", argv[0]);
+        fprintf(stderr, "Error: please provide an author name!\nSyntax: %s <author_name>\n", argv[0]);
         return -1;
     }
 
     size_t authorSize = 0;
     for (int i = 1; i < argc; ++i)
         authorSize += strlen(argv[i]) + 1;
+    
 
     char authorName[authorSize];
     memset(authorName, 0, authorSize);

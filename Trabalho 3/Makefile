@@ -21,7 +21,7 @@ libbooks: $(OBJDIR)/libbooks.o
 $(OBJDIR)/prog.o: prog.c libbooks.h
 	gcc -Wall -g -c prog.c -o $(OBJDIR)/prog.o
 
-$(OBJDIR)/html_author.o: html_author.c
+$(OBJDIR)/html_author.o: html_author.c libbooks.h
 	gcc -Wall -g -c html_author.c -o $(OBJDIR)/html_author.o
 
 $(OBJDIR)/libbooks.o: libbooks.c libbooks.h

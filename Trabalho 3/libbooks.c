@@ -51,7 +51,7 @@ int do_curl_request(const char *uri, void *data, requestCallback callback) {
         CURLcode code = curl_easy_perform(curl);
         return code;
     }
-
+    
     return 0;
 }
 
@@ -64,7 +64,7 @@ size_t json_request_callback(char *ptr, size_t size, size_t nmemb, Buffer *buf) 
     char *newBuf = realloc(buf->jsonBuffer, buf->currentSize + totalSize + 1);
     if (newBuf == NULL)
         return 0;
-
+    
     buf->jsonBuffer = newBuf;
     memcpy(&(buf->jsonBuffer[buf->currentSize]), ptr, totalSize);
     buf->currentSize += totalSize;
@@ -83,7 +83,7 @@ int httpGetToFile(const char *uri, const char *filename) {
     FILE *file = fopen(filename, "w+");
     if (!file)
         return 0;
-
+    
     int res = do_curl_request(uri, file, (requestCallback) fwrite);
     fclose(file);
     return res == CURLE_OK ? 1 : 0;
@@ -100,7 +100,7 @@ struct json_object *httpGetJsonData(const char *uri) {
     char *jsonBuffer = calloc(INITIAL_BUFFER_SIZE, 1);
     if (jsonBuffer == NULL)
         return NULL;
-
+    
     Buffer buf = { 0, jsonBuffer };
     // do the request
     int err = do_curl_request(uri, &buf, (requestCallback) json_request_callback);
@@ -108,14 +108,14 @@ struct json_object *httpGetJsonData(const char *uri) {
         fprintf(stderr, "An error occurred: %s\n", curl_easy_strerror(err));
         return NULL;
     }
-
+    
     // parse the request if successful
     json_object *json = json_tokener_parse(buf.jsonBuffer);
     if (json == NULL) {
         fprintf(stderr, "Invalid json response!\n");
         return NULL;
     }
-
+    
     free(buf.jsonBuffer);
     return json;
 }
@@ -135,14 +135,14 @@ int googleBooksSearchByAuthor(const char *apikey, const char *author, Collection
     for (int i = 0; ; ) {
         char uri[512];
         sprintf(uri, "https://www.googleapis.com/books/v1/volumes?fields=totalItems,items(id,volumeInfo,accessInfo)&filter=full&maxResults=40&key=%s&q=inauthor:%%22%s%%22&startIndex=%d",
-            apikey, encodedAuthor, i);
-            
+                apikey, encodedAuthor, i);
+        
         json_object *json = httpGetJsonData(uri);
         if (json == NULL)
             return -1;
-
+        
         if (res->volumes == NULL) {
-             // get the volume count
+            // get the volume count
             json_object *totalItemsJson;
             json_object_object_get_ex(json, "totalItems", &totalItemsJson);
             int totalItems = json_object_get_int(totalItemsJson);
@@ -150,7 +150,7 @@ int googleBooksSearchByAuthor(const char *apikey, const char *author, Collection
             res->volume_count = totalItems;
             res->volumes = calloc(totalItems, sizeof(Volume));
         }
-
+        
         // check if we have all the results
         if (i >= res->volume_count) {
             json_object_put(json);
@@ -159,9 +159,14 @@ int googleBooksSearchByAuthor(const char *apikey, const char *author, Collection
         
         json_object *items;
         json_object_object_get_ex(json, "items", &items);
+        if(items == NULL) {
+            json_object_put(json);
+            break;
+        }
         size_t offset = json_object_array_length(items);
-
+        
         for (int j = 0; j < offset; ++j) {
+            printf("%d\n",j);
             json_object *volumeObj = json_object_array_get_idx(items, j);
             json_object *volumeIdObj;
             json_object *titleObj;
@@ -169,9 +174,9 @@ int googleBooksSearchByAuthor(const char *apikey, const char *author, Collection
             json_object *publishedDateObj;
             json_object *pdfAvailableObj;
             json_object *epubAvailableObj;
-
+            
             json_object_object_get_ex(volumeObj, "id", &volumeIdObj);
-
+            
             json_object *volumeInfo;
             json_object_object_get_ex(volumeObj, "volumeInfo", &volumeInfo);
             json_object_object_get_ex(volumeInfo, "title", &titleObj);
@@ -180,9 +185,10 @@ int googleBooksSearchByAuthor(const char *apikey, const char *author, Collection
             json_object *industryIdentifiers;
             json_object_object_get_ex(volumeInfo, "industryIdentifiers", &industryIdentifiers);
             // get the first identifier
-            json_object *ii_first = json_object_array_get_idx(industryIdentifiers, 0);
-            json_object_object_get_ex(ii_first, "identifier", &identifierObj);
-
+            if(industryIdentifiers != NULL){
+                json_object *ii_first = json_object_array_get_idx(industryIdentifiers, 0);
+                json_object_object_get_ex(ii_first, "identifier", &identifierObj);
+            }
             json_object *accessInfo;
             json_object_object_get_ex(volumeObj, "accessInfo", &accessInfo);
             json_object *pdfObj;
@@ -191,34 +197,37 @@ int googleBooksSearchByAuthor(const char *apikey, const char *author, Collection
             json_object *epubObj;
             json_object_object_get_ex(accessInfo, "epub", &epubObj);
             json_object_object_get_ex(epubObj, "isAvailable", &epubAvailableObj);
-
+            
             // need to request memory blocks because json-c will release upon
             // json_object_put call
             Volume *vol = &res->volumes[i + j];
             const char *volumeId = json_object_get_string(volumeIdObj);
             vol->volumeId = calloc(strlen(volumeId) + 1, 1);
             strcpy(vol->volumeId, volumeId);
-
+            
             const char *title = json_object_get_string(titleObj);
             vol->title = calloc(strlen(title) + 1, 1);
             strcpy(vol->title, title);
-
-            const char *identifier = json_object_get_string(identifierObj);
-            vol->isbn = calloc(strlen(identifier) + 1, 1);
-            strcpy(vol->isbn, identifier);
-
-            const char *publishedDate = json_object_get_string(publishedDateObj);
-            vol->publishedDate = calloc(strlen(publishedDate) + 1, 1);
-            strcpy(vol->publishedDate, publishedDate);
-
+            printf("%d\n",j);
+            if(industryIdentifiers != NULL){
+                const char *identifier = json_object_get_string(identifierObj);
+                vol->isbn = calloc(strlen(identifier) + 1, 1);
+                strcpy(vol->isbn, identifier);
+            }
+            if(publishedDateObj != NULL){
+                const char *publishedDate = json_object_get_string(publishedDateObj);
+                vol->publishedDate = calloc(strlen(publishedDate) + 1, 1);
+                strcpy(vol->publishedDate, publishedDate);
+            }
             vol->pdfAvailable = json_object_get_boolean(pdfAvailableObj);
             vol->epubAvailable = json_object_get_boolean(epubAvailableObj);
+            
         }
         
         json_object_put(json);
         i += offset;
     }
-
+    
     curl_free(encodedAuthor);
     return res->volume_count;
 }
@@ -243,12 +252,12 @@ int googleBooksGetUrls(const char *apikey, const char *volumeId, char *thumb_url
     int err = 0;
     char uri[512];
     sprintf(uri, "https://www.googleapis.com/books/v1/volumes/%s?key=%s&projection=lite&fields=volumeInfo(imageLinks),accessInfo(pdf,epub)",
-        volumeId, apikey);
-
+            volumeId, apikey);
+    
     json_object *json = httpGetJsonData(uri);
     if (json == NULL)
         return -1;
-
+    
     // get thumbnail url
     json_object *volumeInfo;
     json_object_object_get_ex(json, "volumeInfo", &volumeInfo);
@@ -257,7 +266,7 @@ int googleBooksGetUrls(const char *apikey, const char *volumeId, char *thumb_url
     json_object *thumbnail;
     json_object_object_get_ex(imageLinks, "thumbnail", &thumbnail);
     strncpy(thumb_url, json_object_get_string(thumbnail), thumb_len);
-
+    
     json_object *accessInfo;
     json_object_object_get_ex(json, "accessInfo", &accessInfo);
     json_object *pdf;
@@ -290,7 +299,7 @@ void free_collection(Collection *cl) {
             free(vol->isbn);
             free(vol->publishedDate);
         }
-
+        
         free(cl->volumes);
     }
 }
