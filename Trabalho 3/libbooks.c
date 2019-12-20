@@ -263,21 +263,15 @@ int googleBooksGetUrls(const char *apikey, const char *volumeId, char *thumb_url
     json_object *pdf;
     json_object_object_get_ex(accessInfo, "pdf", &pdf);
     json_object *downloadLink;
-    if (!json_object_object_get_ex(pdf, "downloadLink", &downloadLink)) {
-        json_object_put(json);
-        return err+=ERR_PDF_NOT_FOUND;
-    }
+    if (!json_object_object_get_ex(pdf, "downloadLink", &downloadLink)) err+=ERR_PDF_NOT_FOUND;
+    else strncpy(pdf_url, json_object_get_string(downloadLink), pdf_len);
     
     json_object *epub;
     json_object_object_get_ex(accessInfo, "epub", &epub);
     json_object *downloadLinkE;
-    if (!json_object_object_get_ex(epub, "downloadLink", &downloadLinkE)) {
-        json_object_put(json);
-        return err+=ERR_EPUB_NOT_FOUND;
-    }
-
-    strncpy(pdf_url, json_object_get_string(downloadLink), pdf_len);
-    strncpy(epub_url, json_object_get_string(downloadLinkE), epub_len);
+    if (!json_object_object_get_ex(epub, "downloadLink", &downloadLinkE)) err+=ERR_EPUB_NOT_FOUND;
+    else strncpy(epub_url, json_object_get_string(downloadLinkE), epub_len);
+    
     json_object_put(json);
     return err;
 }
