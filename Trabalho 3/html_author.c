@@ -48,9 +48,11 @@ int main(int argc, char *argv[]) {
             Volume vol = res.volumes[i];
             printf("------------------------------------------------------------------------\n");
             printf("Title:     %s\n", vol.title);
-            printf("PDF Available:  %d\n", vol.pdfAvailable);
+            //printf("PDF Available:  %d\n", vol.pdfAvailable);
+            printf("PDF Available:  %d\n", strlen(pdf_url) > 0);
             printf("PDF url:   %s\n", pdf_url);
-            printf("EPUB Available:  %d\n", vol.epubAvailable);
+            printf("EPUB Available:  %d\n", strlen(epub_url) > 0);
+            //printf("EPUB Available:  %d\n", vol.epubAvailable);
             printf("EPUB url:   %s\n", epub_url);
             printf("thumb url: %s\n", thumb_url);
 

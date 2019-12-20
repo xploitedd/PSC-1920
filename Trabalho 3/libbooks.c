@@ -166,7 +166,6 @@ int googleBooksSearchByAuthor(const char *apikey, const char *author, Collection
         size_t offset = json_object_array_length(items);
         
         for (int j = 0; j < offset; ++j) {
-            printf("%d\n",j);
             json_object *volumeObj = json_object_array_get_idx(items, j);
             json_object *volumeIdObj;
             json_object *titleObj;
@@ -208,7 +207,6 @@ int googleBooksSearchByAuthor(const char *apikey, const char *author, Collection
             const char *title = json_object_get_string(titleObj);
             vol->title = calloc(strlen(title) + 1, 1);
             strcpy(vol->title, title);
-            printf("%d\n",j);
             if(industryIdentifiers != NULL){
                 const char *identifier = json_object_get_string(identifierObj);
                 vol->isbn = calloc(strlen(identifier) + 1, 1);
