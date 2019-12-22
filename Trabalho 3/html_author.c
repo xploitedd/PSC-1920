@@ -51,10 +51,12 @@ int main(int argc, char *argv[]) {
             char *epub_url = calloc(url_len, 1);
             char *thumb_url = calloc(url_len, 1);
 
-            int err = googleBooksGetUrls(apikey, res.volumes[i].volumeId, thumb_url, url_len, pdf_url, url_len, epub_url, url_len);
+            Volume vol = res.volumes[i];
+            int err = googleBooksGetUrls(apikey, vol.volumeId, thumb_url, url_len, pdf_url, url_len, epub_url, url_len);
             if (err == -1) {
                 free(pdf_url);
                 free(thumb_url);
+                free(epub_url);
 
                 if (++currentAttempts == TIMEOUT) break;
                 continue;
