@@ -134,80 +134,91 @@ int googleBooksSearchByAuthor(const char *apikey, const char *author, Collection
     char *encodedAuthor = curl_easy_escape(curl, author, 0);
     for (int i = 0; ; ) {
         char uri[512];
-        sprintf(uri, "https://www.googleapis.com/books/v1/volumes?fields=totalItems,items(id,volumeInfo,accessInfo)&filter=full&maxResults=40&key=%s&q=inauthor:%%22%s%%22&startIndex=%d",
+        sprintf(uri, "https://www.googleapis.com/books/v1/volumes?fields=totalItems,items(id,volumeInfo,accessInfo)&maxResults=40&key=%s&q=inauthor:%%22%s%%22&startIndex=%d",
             apikey, encodedAuthor, i);
-            
+    
         json_object *json = httpGetJsonData(uri);
-        if (json == NULL)
+        if (json == NULL) {
+            curl_free(encodedAuthor);
+            json_object_put(json);
             return -1;
+        }
 
         if (res->volumes == NULL) {
              // get the volume count
             json_object *totalItemsJson;
-            json_object_object_get_ex(json, "totalItems", &totalItemsJson);
+            if (!json_object_object_get_ex(json, "totalItems", &totalItemsJson)) {
+                curl_free(encodedAuthor);
+                json_object_put(json);
+                return -1;
+            }
+
             int totalItems = json_object_get_int(totalItemsJson);
             // put the volume information into the collection
             res->volume_count = totalItems;
             res->volumes = calloc(totalItems, sizeof(Volume));
         }
-
-        // check if we have all the results
-        if (i >= res->volume_count) {
+        
+        json_object *items;
+        if (i >= res->volume_count || !json_object_object_get_ex(json, "items", &items)) {
             json_object_put(json);
             break;
         }
-        
-        json_object *items;
-        json_object_object_get_ex(json, "items", &items);
-        size_t offset = json_object_array_length(items);
 
+        size_t offset = json_object_array_length(items);
         for (int j = 0; j < offset; ++j) {
             json_object *volumeObj = json_object_array_get_idx(items, j);
+            // we assume that each book has at least an id, volumeInfo and a title
             json_object *volumeIdObj;
-            json_object *titleObj;
-            json_object *identifierObj;
-            json_object *publishedDateObj;
-            json_object *pdfAvailableObj;
-
             json_object_object_get_ex(volumeObj, "id", &volumeIdObj);
 
             json_object *volumeInfo;
             json_object_object_get_ex(volumeObj, "volumeInfo", &volumeInfo);
-            json_object_object_get_ex(volumeInfo, "title", &titleObj);
-            json_object_object_get_ex(volumeInfo, "publishedDate", &publishedDateObj);
-            
-            json_object *industryIdentifiers;
-            json_object_object_get_ex(volumeInfo, "industryIdentifiers", &industryIdentifiers);
-            // get the first identifier
-            json_object *ii_first = json_object_array_get_idx(industryIdentifiers, 0);
-            json_object_object_get_ex(ii_first, "identifier", &identifierObj);
 
-            json_object *accessInfo;
-            json_object_object_get_ex(volumeObj, "accessInfo", &accessInfo);
-            json_object *pdfObj;
-            json_object_object_get_ex(accessInfo, "pdf", &pdfObj);
-            json_object_object_get_ex(pdfObj, "isAvailable", &pdfAvailableObj);
-
-            // need to request memory blocks because json-c will release upon
-            // json_object_put call
             Volume *vol = &res->volumes[i + j];
             const char *volumeId = json_object_get_string(volumeIdObj);
+            // alloc space for the string because json strings will be released upon conclusion
             vol->volumeId = calloc(strlen(volumeId) + 1, 1);
             strcpy(vol->volumeId, volumeId);
+
+            json_object *titleObj;
+            json_object_object_get_ex(volumeInfo, "title", &titleObj);
 
             const char *title = json_object_get_string(titleObj);
             vol->title = calloc(strlen(title) + 1, 1);
             strcpy(vol->title, title);
 
-            const char *identifier = json_object_get_string(identifierObj);
-            vol->isbn = calloc(strlen(identifier) + 1, 1);
-            strcpy(vol->isbn, identifier);
+            json_object *publishedDateObj;
+            // published date is optional
+            if (json_object_object_get_ex(volumeInfo, "publishedDate", &publishedDateObj)) {
+                const char *publishedDate = json_object_get_string(publishedDateObj);
+                vol->publishedDate = calloc(strlen(publishedDate) + 1, 1);
+                strcpy(vol->publishedDate, publishedDate);
+            }
+            
+            json_object *industryIdentifiers;
+            if (json_object_object_get_ex(volumeInfo, "industryIdentifiers", &industryIdentifiers)) {
+                // get the first identifier
+                json_object *ii_first = json_object_array_get_idx(industryIdentifiers, 0);
+                json_object *identifierObj;
+                if (json_object_object_get_ex(ii_first, "identifier", &identifierObj)) {
+                    const char *identifier = json_object_get_string(identifierObj);
+                    vol->identifier = calloc(strlen(identifier) + 1, 1);
+                    strcpy(vol->identifier, identifier);
+                }
+            }
 
-            const char *publishedDate = json_object_get_string(publishedDateObj);
-            vol->publishedDate = calloc(strlen(publishedDate) + 1, 1);
-            strcpy(vol->publishedDate, publishedDate);
-
-            vol->pdfAvailable = json_object_get_boolean(pdfAvailableObj);
+            json_object *accessInfo;
+            if (json_object_object_get_ex(volumeObj, "accessInfo", &accessInfo)) {
+                json_object *pdfObj;
+                if (json_object_object_get_ex(accessInfo, "pdf", &pdfObj)) {
+                    json_object *pdfAvailableObj;
+                    if (json_object_object_get_ex(pdfObj, "isAvailable", &pdfAvailableObj)) {
+                        json_object *downloadLink;
+                        vol->pdfAvailable = json_object_object_get_ex(pdfObj, "downloadLink", &downloadLink);
+                    }
+                }
+            } 
         }
         
         json_object_put(json);
@@ -244,24 +255,29 @@ int googleBooksGetUrls(const char *apikey, const char *volumeId,
 
     // get thumbnail url
     json_object *volumeInfo;
-    json_object_object_get_ex(json, "volumeInfo", &volumeInfo);
-    json_object *imageLinks;
-    json_object_object_get_ex(volumeInfo, "imageLinks", &imageLinks);
-    json_object *thumbnail;
-    json_object_object_get_ex(imageLinks, "thumbnail", &thumbnail);
-    strncpy(thumb_url, json_object_get_string(thumbnail), thumb_len);
-
-    json_object *accessInfo;
-    json_object_object_get_ex(json, "accessInfo", &accessInfo);
-    json_object *pdf;
-    json_object_object_get_ex(accessInfo, "pdf", &pdf);
-    json_object *downloadLink;
-    if (!json_object_object_get_ex(pdf, "downloadLink", &downloadLink)) {
-        json_object_put(json);
-        return ERR_PDF_NOT_FOUND;
+    if (json_object_object_get_ex(json, "volumeInfo", &volumeInfo)) {
+        json_object *imageLinks;
+        if (json_object_object_get_ex(volumeInfo, "imageLinks", &imageLinks)) {
+            json_object *thumbnail;
+            if (json_object_object_get_ex(imageLinks, "thumbnail", &thumbnail))
+                strncpy(thumb_url, json_object_get_string(thumbnail), thumb_len);
+        }
     }
 
-    strncpy(pdf_url, json_object_get_string(downloadLink), pdf_len);
+    json_object *accessInfo;
+    if (json_object_object_get_ex(json, "accessInfo", &accessInfo)) {
+        json_object *pdf;
+        if (json_object_object_get_ex(accessInfo, "pdf", &pdf)) {
+            json_object *downloadLink;
+            if (!json_object_object_get_ex(pdf, "downloadLink", &downloadLink)) {
+                json_object_put(json);
+                return ERR_PDF_NOT_FOUND;
+            }
+
+            strncpy(pdf_url, json_object_get_string(downloadLink), pdf_len);
+        }
+    }
+
     json_object_put(json);
     return 0;
 }
@@ -277,7 +293,7 @@ void free_collection(Collection *cl) {
             Volume *vol = &cl->volumes[i];
             free(vol->volumeId);
             free(vol->title);
-            free(vol->isbn);
+            free(vol->identifier);
             free(vol->publishedDate);
         }
 

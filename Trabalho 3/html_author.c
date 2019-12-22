@@ -2,6 +2,8 @@
 #include<stdio.h>
 #include<string.h>
 
+#define TIMEOUT 5
+
 int main(int argc, char *argv[]) {
     if (argc < 2) {
         fprintf(stderr, "Error: please provide an author name!\nExample: %s <author_name>\n", argv[0]);
@@ -40,15 +42,21 @@ int main(int argc, char *argv[]) {
 
     books_init();
     Collection res = { 0, NULL };
+    int currentAttempts = 0;
     if (googleBooksSearchByAuthor(apikey, authorName, &res) > 0) {
-        printf("count: %ld\n", res.volume_count);
         for (int i = 0; i < res.volume_count; ++i) {
             size_t url_len = 128;
             char *pdf_url = calloc(url_len, 1);
             char *thumb_url = calloc(url_len, 1);
 
             int err = googleBooksGetUrls(apikey, res.volumes[i].volumeId, thumb_url, url_len, pdf_url, url_len);
-            if (err == -1) continue;
+            if (err == -1) {
+                free(pdf_url);
+                free(thumb_url);
+
+                if (++currentAttempts == TIMEOUT) break;
+                continue;
+            }
 
             printf("------------------------------------------------------------------------\n");
             printf("title:     %s\n", res.volumes[i].title);

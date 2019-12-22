@@ -5,12 +5,12 @@
 #include<json-c/json.h>
 #include<stdbool.h>
 
-const int ERR_PDF_NOT_FOUND = -2;
+#define ERR_PDF_NOT_FOUND -2;
 
 typedef struct volume {
     char *volumeId;
     char *title;
-    char *isbn;
+    char *identifier;
     char *publishedDate;
     bool pdfAvailable;
 } Volume;
