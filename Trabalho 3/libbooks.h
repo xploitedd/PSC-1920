@@ -5,13 +5,13 @@
 #include<json-c/json.h>
 #include<stdbool.h>
 
-const int ERR_PDF_NOT_FOUND = -2;
-const int ERR_EPUB_NOT_FOUND = -3;
+#define ERR_PDF_NOT_FOUND -2;
+#define ERR_EPUB_NOT_FOUNT = -3;
 
 typedef struct volume {
     char *volumeId;
     char *title;
-    char *isbn;
+    char *identifier;
     char *publishedDate;
     bool pdfAvailable;
     bool epubAvailable;

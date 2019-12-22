@@ -2,6 +2,8 @@
 #include<stdio.h>
 #include<string.h>
 
+#define TIMEOUT 5
+
 int main(int argc, char *argv[]) {
     if (argc < 2) {
         fprintf(stderr, "Error: please provide an author name!\nSyntax: %s <author_name>\n", argv[0]);
@@ -33,10 +35,16 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
+    FILE *template = fopen("template.html", "r");
+    if (template == NULL) {
+        fprintf(stderr, "Template file <template.html> not found!");
+        return -1;
+    }
+
     books_init();
     Collection res = { 0, NULL };
+    int currentAttempts = 0;
     if (googleBooksSearchByAuthor(apikey, authorName, &res) > 0) {
-        printf("count: %ld\n", res.volume_count);
         for (int i = 0; i < res.volume_count; ++i) {
             size_t url_len = 128;
             char *pdf_url = calloc(url_len, 1);
@@ -44,8 +52,14 @@ int main(int argc, char *argv[]) {
             char *thumb_url = calloc(url_len, 1);
 
             int err = googleBooksGetUrls(apikey, res.volumes[i].volumeId, thumb_url, url_len, pdf_url, url_len, epub_url, url_len);
-            if (err == -1) continue;
-            Volume vol = res.volumes[i];
+            if (err == -1) {
+                free(pdf_url);
+                free(thumb_url);
+
+                if (++currentAttempts == TIMEOUT) break;
+                continue;
+            }
+
             printf("------------------------------------------------------------------------\n");
             printf("Title:     %s\n", vol.title);
             //printf("PDF Available:  %d\n", vol.pdfAvailable);
@@ -62,6 +76,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    fclose(template);
     free_collection(&res);
     books_free();
     return 0;
