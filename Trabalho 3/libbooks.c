@@ -51,7 +51,7 @@ int do_curl_request(const char *uri, void *data, requestCallback callback) {
         CURLcode code = curl_easy_perform(curl);
         return code;
     }
-
+    
     return 0;
 }
 
@@ -64,7 +64,7 @@ size_t json_request_callback(char *ptr, size_t size, size_t nmemb, Buffer *buf) 
     char *newBuf = realloc(buf->jsonBuffer, buf->currentSize + totalSize + 1);
     if (newBuf == NULL)
         return 0;
-
+    
     buf->jsonBuffer = newBuf;
     memcpy(&(buf->jsonBuffer[buf->currentSize]), ptr, totalSize);
     buf->currentSize += totalSize;
@@ -83,7 +83,7 @@ int httpGetToFile(const char *uri, const char *filename) {
     FILE *file = fopen(filename, "w+");
     if (!file)
         return 0;
-
+    
     int res = do_curl_request(uri, file, (requestCallback) fwrite);
     fclose(file);
     return res == CURLE_OK ? 1 : 0;
@@ -100,7 +100,7 @@ struct json_object *httpGetJsonData(const char *uri) {
     char *jsonBuffer = calloc(INITIAL_BUFFER_SIZE, 1);
     if (jsonBuffer == NULL)
         return NULL;
-
+    
     Buffer buf = { 0, jsonBuffer };
     // do the request
     int err = do_curl_request(uri, &buf, (requestCallback) json_request_callback);
@@ -108,14 +108,14 @@ struct json_object *httpGetJsonData(const char *uri) {
         fprintf(stderr, "An error occurred: %s\n", curl_easy_strerror(err));
         return NULL;
     }
-
+    
     // parse the request if successful
     json_object *json = json_tokener_parse(buf.jsonBuffer);
     if (json == NULL) {
         fprintf(stderr, "Invalid json response!\n");
         return NULL;
     }
-
+    
     free(buf.jsonBuffer);
     return json;
 }
@@ -143,9 +143,9 @@ int googleBooksSearchByAuthor(const char *apikey, const char *author, Collection
             json_object_put(json);
             return -1;
         }
-
+      
         if (res->volumes == NULL) {
-             // get the volume count
+            // get the volume count
             json_object *totalItemsJson;
             if (!json_object_object_get_ex(json, "totalItems", &totalItemsJson)) {
                 curl_free(encodedAuthor);
@@ -171,10 +171,10 @@ int googleBooksSearchByAuthor(const char *apikey, const char *author, Collection
             // we assume that each book has at least an id, volumeInfo and a title
             json_object *volumeIdObj;
             json_object_object_get_ex(volumeObj, "id", &volumeIdObj);
-
+            
             json_object *volumeInfo;
             json_object_object_get_ex(volumeObj, "volumeInfo", &volumeInfo);
-
+          
             Volume *vol = &res->volumes[i + j];
             const char *volumeId = json_object_get_string(volumeIdObj);
             // alloc space for the string because json strings will be released upon conclusion
@@ -195,7 +195,7 @@ int googleBooksSearchByAuthor(const char *apikey, const char *author, Collection
                 vol->publishedDate = calloc(strlen(publishedDate) + 1, 1);
                 strcpy(vol->publishedDate, publishedDate);
             }
-            
+
             json_object *industryIdentifiers;
             if (json_object_object_get_ex(volumeInfo, "industryIdentifiers", &industryIdentifiers)) {
                 // get the first identifier
@@ -211,6 +211,7 @@ int googleBooksSearchByAuthor(const char *apikey, const char *author, Collection
             json_object *accessInfo;
             if (json_object_object_get_ex(volumeObj, "accessInfo", &accessInfo)) {
                 json_object *pdfObj;
+                json_object *epubObj;
                 if (json_object_object_get_ex(accessInfo, "pdf", &pdfObj)) {
                     json_object *pdfAvailableObj;
                     if (json_object_object_get_ex(pdfObj, "isAvailable", &pdfAvailableObj)) {
@@ -218,13 +219,19 @@ int googleBooksSearchByAuthor(const char *apikey, const char *author, Collection
                         vol->pdfAvailable = json_object_object_get_ex(pdfObj, "downloadLink", &downloadLink);
                     }
                 }
+              
+                if (json_object_object_get_ex(accessInfo, "epub", &epubObj)) {
+                    json_object *epubAvailableObj;
+                    json_object_object_get_ex(epubObj, "isAvailable", &epubAvailableObj);
+                    vol->epubAvailable = json_object_get_boolean(epubAvailableObj);
+                }
             } 
         }
         
         json_object_put(json);
         i += offset;
     }
-
+    
     curl_free(encodedAuthor);
     return res->volume_count;
 }
@@ -239,20 +246,22 @@ int googleBooksSearchByAuthor(const char *apikey, const char *author, Collection
  * @param thumb_len max length of the thumbnail url
  * @param pdf_url pointer where to copy the pdf url to
  * @param pdf_len max length of the pdf url
+ * @param epub_url pointer where to copy the epub url to
+ * @param epub_len max length of the epub url
  * @return zero if no errors, otherwise returns the error code
  */
-int googleBooksGetUrls(const char *apikey, const char *volumeId,
-                       char *thumb_url, size_t thumb_len,
-                       char *pdf_url,   size_t pdf_len)
+int googleBooksGetUrls(const char *apikey, const char *volumeId, char *thumb_url, 
+                       size_t thumb_len, char *pdf_url,   size_t pdf_len, char *epub_url, size_t epub_len)
 {
+    int err = 0;
     char uri[512];
-    sprintf(uri, "https://www.googleapis.com/books/v1/volumes/%s?key=%s&projection=lite&fields=volumeInfo(imageLinks),accessInfo(pdf)",
-        volumeId, apikey);
-
+    sprintf(uri, "https://www.googleapis.com/books/v1/volumes/%s?key=%s&projection=lite&fields=volumeInfo(imageLinks),accessInfo(pdf,epub)",
+            volumeId, apikey);
+    
     json_object *json = httpGetJsonData(uri);
     if (json == NULL)
         return -1;
-
+    
     // get thumbnail url
     json_object *volumeInfo;
     if (json_object_object_get_ex(json, "volumeInfo", &volumeInfo)) {
@@ -267,19 +276,26 @@ int googleBooksGetUrls(const char *apikey, const char *volumeId,
     json_object *accessInfo;
     if (json_object_object_get_ex(json, "accessInfo", &accessInfo)) {
         json_object *pdf;
+        json_object *epub;
         if (json_object_object_get_ex(accessInfo, "pdf", &pdf)) {
             json_object *downloadLink;
-            if (!json_object_object_get_ex(pdf, "downloadLink", &downloadLink)) {
-                json_object_put(json);
-                return ERR_PDF_NOT_FOUND;
-            }
-
-            strncpy(pdf_url, json_object_get_string(downloadLink), pdf_len);
+            if (!json_object_object_get_ex(pdf, "downloadLink", &downloadLink))
+                err = ERR_PDF_NOT_FOUND;
+            else
+                strncpy(pdf_url, json_object_get_string(downloadLink), pdf_len);
+        }
+      
+        if (json_object_object_get_ex(accessInfo, "epub", &epub)) {
+            json_object *downloadLink;
+            if (!json_object_object_get_ex(epub, "downloadLink", &downloadLink))
+                err = ERR_EPUB_NOT_FOUND;
+            else
+                strncpy(epub_url, json_object_get_string(downloadLink), epub_len);
         }
     }
-
+  
     json_object_put(json);
-    return 0;
+    return err;
 }
 
 /**
@@ -296,7 +312,7 @@ void free_collection(Collection *cl) {
             free(vol->identifier);
             free(vol->publishedDate);
         }
-
+        
         free(cl->volumes);
     }
 }
