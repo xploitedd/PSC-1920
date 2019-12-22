@@ -15,19 +15,26 @@ int main(int argc, char *argv[]) {
         authorSize += strlen(argv[i]) + 1;
     
 
-    char authorName[authorSize];
+    char fileName[authorSize];
+    char authorName[authorSize + 5];
     memset(authorName, 0, authorSize);
+    memset(fileName, 0, authorSize + 5);
 
     size_t current = 0;
     for (int i = 1; i < argc; ++i) {
         char *str = argv[i];
         strcat(authorName, str);
+        strcat(fileName, str);
         current += strlen(argv[i]) + 1;
         authorName[current - 1] = ' ';
+        fileName[current - 1] = '-';
     }
 
     authorName[authorSize - 1] = 0;
+    strcpy(fileName + (authorSize - 1), ".html\0");
+
     printf("Author Name: %s\n", authorName);
+    printf("File name: %s\n", fileName);
 
     char *apikey = getenv("GBOOKS_API_KEY");
     if (apikey == NULL) {
@@ -35,11 +42,19 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    FILE *template = fopen("template.html", "r");
-    if (template == NULL) {
-        fprintf(stderr, "Template file <template.html> not found!");
+    // get template contents
+    FILE *file = fopen(fileName, "w+");
+    if (file == NULL) {
+        fprintf(stderr, "Error opening file");
         return -1;
     }
+
+    // add author name to the file
+    fprintf(
+        file, 
+        "<!doctype html><html><head><title>%s</title><link href=\"https://unpkg.com/tailwindcss@^1.0/dist/tailwind.min.css\" rel=\"stylesheet\"></head><body><div class=\"container mx-auto my-6\"><h1 class=\"font-bold text-5xl\">%s</h1>", 
+        authorName, authorName
+    );
 
     books_init();
     Collection res = { 0, NULL };
@@ -62,23 +77,26 @@ int main(int argc, char *argv[]) {
                 continue;
             }
 
-            printf("------------------------------------------------------------------------\n");
-            printf("Title:     %s\n", vol.title);
-            //printf("PDF Available:  %d\n", vol.pdfAvailable);
-            printf("PDF Available:  %d\n", strlen(pdf_url) > 0);
-            printf("PDF url:   %s\n", pdf_url);
-            printf("EPUB Available:  %d\n", strlen(epub_url) > 0);
-            //printf("EPUB Available:  %d\n", vol.epubAvailable);
-            printf("EPUB url:   %s\n", epub_url);
-            printf("thumb url: %s\n", thumb_url);
+            fprintf(
+                file, 
+                "<div class=\"md:flex my-4\"><div class=\"md:flex-shrink-0\"><img class=\"rounded-lg md:w-56\" src=\"%s\"></div><div class=\"mt-4 md:mt-0 md:ml-6\"><a href=\"#\" class=\"block mt-1 text-lg leading-tight font-semibold text-gray-900 hover:underline\">%s</a><p class=\"mt-2 text-gray-600\">Volume ID: %s</p><p class=\"mt-2 text-gray-600\">Identifier: %s</p><p class=\"mt-2 text-gray-600\">Published Date: %s</p>", 
+                thumb_url, vol.title, vol.volumeId, vol.identifier, vol.publishedDate);
 
+            if (vol.pdfAvailable)
+                fprintf(file, "<a href=\"%s\" class=\"mt-2\">PDF Download Link</a>", pdf_url);
+
+            if (vol.epubAvailable)
+                fprintf(file, "<a href=\"%s\" class=\"mt-2\">EPUB Download Link</a>", epub_url);
+
+            fprintf(file, "</div></div>");
             free(pdf_url);
             free(epub_url);
             free(thumb_url);
         }
     }
 
-    fclose(template);
+    fprintf(file, "</div></body></html>");
+    free(file);
     free_collection(&res);
     books_free();
     return 0;

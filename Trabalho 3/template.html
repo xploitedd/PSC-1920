@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="author" content="ISEL - LI32D - Grupo 6">
+        <title>%author_name%</title>
+        <link href="https://unpkg.com/tailwindcss@^1.0/dist/tailwind.min.css" rel="stylesheet">
+    </head>
+    <body>
+        <div class="container mx-auto my-6">
+            <h1 class="font-bold text-5xl">%author_name%</h1>
+            %books_for_start%
+            <div class="md:flex my-4">
+                <div class="md:flex-shrink-0">
+                  <img class="rounded-lg md:h-56" src="%book_thumbnail_url%">
+                </div>
+                <div class="mt-4 md:mt-0 md:ml-6">
+                  <a href="#" class="block mt-1 text-lg leading-tight font-semibold text-gray-900 hover:underline"><%book_name%></a>
+                  <p class="mt-2 text-gray-600">Volume ID: %volume_id%</p>
+                  <p class="mt-2 text-gray-600">Identifier: %book_id%</p>
+                  <p class="mt-2 text-gray-600">Published Date: %book_published_date%</p>
+                  <a href="%book_pdf_url%" class="mt-2">PDF Download Link</a>
+                  <a href="%book_epub_url%" class="mt-2">EPUB Download Link</a>
+                </div>
+            </div>
+            %books_for_end%
+        </div>
+    </body>
+</html>
