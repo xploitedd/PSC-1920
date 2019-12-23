@@ -4,15 +4,10 @@
 #include "libbooks.h"
 
 
-int testHttpGetToFile(const char *uri, const char *filename){
-     int result = httpGetToFile(uri, filename);
-     if(result == 1) {
-         puts("Success\n");
-         return 1;
-    } else {
-        puts ("Failed to GET\n");
-        return 0;
-    }
+void testHttpGetToFile(const char *uri, const char *filename){
+      int ret = httpGetToFile(uri, filename);
+      if (!ret)
+        fprintf(stderr, "An error occurred: %s\n", strerror(errno));
 }
 
 void testHttpGetJsonData(char* uri){
@@ -22,7 +17,6 @@ void testHttpGetJsonData(char* uri){
             json_object_put(received);
             return;
     }else {
-    printf("Recived Json Object!\n");
     json_object *totalItemsJson;
     json_object_object_get_ex(received, "totalItems", &totalItemsJson);
     int totalItems = json_object_get_int(totalItemsJson);
@@ -48,8 +42,38 @@ void testHttpGetJsonData(char* uri){
     books_free();
 }
 
+
+void printVol(Collection col){
+    for (int i = 0; i < col.volume_count; ++i) {
+            Volume vol = col.volumes[i];
+            printf("------------------------------------\n");
+            printf("Idx:            %d\n", i);
+            printf("Id:             %s\n", vol.volumeId);
+            printf("Title:          %s\n", vol.title);
+            printf("Published Date: %s\n", vol.publishedDate);
+            printf("ISBN:           %s\n", vol.identifier);
+            printf("PDF Available:  %d\n", vol.pdfAvailable);
+            printf("EPUB Available:  %d\n", vol.epubAvailable);
+    }
+}
+void testgoogleBooksSearchByAuthor(){
+    books_init();
+    Collection col = { 0, NULL };
+    Collection col1 = { 0, NULL };
+    int err = googleBooksSearchByAuthor("AIzaSyDQcIpcRauamoUdu0s9AYKSyPJX7VjAfr8", "Camilo Castelo Branco", &col);
+    int err1 = googleBooksSearchByAuthor("AIzaSyDQcIpcRauamoUdu0s9AYKSyPJX7VjAfr8", "Alexandre Herculano", &col1);
+    printVol(col);
+    printVol(col1);
+    free_collection(&col);
+    free_collection(&col1);
+    books_free();
+}
+
+
+
 int main(int argc, char *argv[]){
     printf("httpGetToFile:");
-    testHttpGetToFile("https://api.github.com/users/xploitedd/repos", "google.html");
+    testHttpGetToFile("https://api.github.com/users/xploitedd/repos", "hello.html");
     testHttpGetJsonData("https://www.googleapis.com/books/v1/volumes?q=inauthor:%22Alexandre%20Herculano%22");
+    //testgoogleBooksSearchByAuthor();
 }
