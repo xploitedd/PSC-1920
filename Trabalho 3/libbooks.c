@@ -158,9 +158,27 @@ int googleBooksSearchByAuthor(const char *apikey, const char *author, Collection
             res->volume_count = totalItems;
             res->volumes = calloc(totalItems, sizeof(Volume));
         }
+
+        if (i >= res->volume_count) {
+            json_object_put(json);
+            break;
+        }
         
         json_object *items;
-        if (i >= res->volume_count || !json_object_object_get_ex(json, "items", &items)) {
+        if (!json_object_object_get_ex(json, "items", &items)) {
+            // fix google totalItems erractic behaviour
+            if (res->volume_count > i) {
+                res->volume_count = i;
+                Volume *ptr = realloc(res->volumes, i * sizeof(Volume));
+                if (ptr == NULL) {
+                    curl_free(encodedAuthor);
+                    json_object_put(json);
+                    return -1;
+                }
+
+                res->volumes = ptr;
+            }
+
             json_object_put(json);
             break;
         }
