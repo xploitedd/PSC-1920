@@ -41,7 +41,7 @@ void books_free() {
  * @param uri pointer to the resource uri
  * @param data pointer to a data buffer
  * @param callback pointer to the callback function
- * @return true if no error occurred
+ * @return CURLE_OK if no error ocurred
  */
 int do_curl_request(const char *uri, void *data, requestCallback callback) {
     if (curl) {
@@ -52,7 +52,7 @@ int do_curl_request(const char *uri, void *data, requestCallback callback) {
         return code;
     }
     
-    return 0;
+    return CURLE_FAILED_INIT;
 }
 
 /**
