@@ -1,7 +1,7 @@
 
 OBJDIR = obj
 
-all: lib prog html_author
+all: lib prog html_author tests
 lib: $(OBJDIR) libbooks
 clean:
 	rm -r $(OBJDIR)
@@ -11,6 +11,9 @@ $(OBJDIR):
 
 prog: $(OBJDIR)/prog.o libbooks libbooks.h
 	gcc -Wall -g $(OBJDIR)/prog.o ./libbooks.so -o prog -lcurl -ljson-c
+
+tests: $(OBJDIR)/tests.o libbooks libbooks.h
+	gcc -Wall -g $(OBJDIR)/tests.o ./libbooks.so -o tests -lcurl -ljson-c
 
 html_author: $(OBJDIR)/html_author.o libbooks libbooks.h
 	gcc -Wall -g $(OBJDIR)/html_author.o ./libbooks.so -o html_author -lcurl -ljson-c
@@ -26,3 +29,6 @@ $(OBJDIR)/html_author.o: html_author.c libbooks.h
 
 $(OBJDIR)/libbooks.o: libbooks.c libbooks.h
 	gcc -Wall -g -c -fPIC libbooks.c -o $(OBJDIR)/libbooks.o
+
+$(OBJDIR)/tests.o: tests.c libbooks.h
+	gcc -Wall -g -c tests.c -o $(OBJDIR)/tests.o
