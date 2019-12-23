@@ -240,8 +240,10 @@ int googleBooksSearchByAuthor(const char *apikey, const char *author, Collection
               
                 if (json_object_object_get_ex(accessInfo, "epub", &epubObj)) {
                     json_object *epubAvailableObj;
-                    json_object_object_get_ex(epubObj, "isAvailable", &epubAvailableObj);
-                    vol->epubAvailable = json_object_get_boolean(epubAvailableObj);
+                    if (json_object_object_get_ex(epubObj, "isAvailable", &epubAvailableObj)) {
+                        json_object *downloadLink;
+                        vol->epubAvailable = json_object_object_get_ex(epubObj, "downloadLink", &downloadLink);
+                    }
                 }
             } 
         }
