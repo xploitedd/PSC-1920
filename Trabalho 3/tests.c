@@ -70,10 +70,44 @@ void testgoogleBooksSearchByAuthor(){
 }
 
 
+void testGoogleBooksGetUrls(){
+    books_init();
+    char *pdf = calloc(100, 1); 
+    char *epub = calloc(100, 1);
+    char *thumbnail = calloc(100, 1);
+    Collection col = { 0, NULL };
+    Collection col1 = { 0, NULL };
+    int err = googleBooksSearchByAuthor("AIzaSyDQcIpcRauamoUdu0s9AYKSyPJX7VjAfr8", "Camilo Castelo Branco", &col);
+    int err1 = googleBooksSearchByAuthor("AIzaSyDQcIpcRauamoUdu0s9AYKSyPJX7VjAfr8", "Alexandre Herculano", &col1);
+    for (int i = 0; i < col.volume_count; ++i) {
+    Volume vol = col.volumes[i];
+    printf("Book Name: %s\n", vol.title);
+    int errUrl = googleBooksGetUrls("AIzaSyDQcIpcRauamoUdu0s9AYKSyPJX7VjAfr8", vol.volumeId, thumbnail, 100, pdf, 100,epub,100);
+    if(errUrl == 1){printf("pdf url: %s thumbnail: %s\n", pdf, thumbnail);}
+    else puts(Not Available);
+    }
+    for (int i = 0; i < col1.volume_count; ++i) {
+    Volume vol = col.volumes[i];
+    printf("Book Name: %s\n", vol.title);
+    int errUrl1 = googleBooksGetUrls("AIzaSyDQcIpcRauamoUdu0s9AYKSyPJX7VjAfr8", vol.volumeId, thumbnail, 100, pdf, 100,epub,100);
+    if(errUrl == 1){printf("pdf url: %s thumbnail: %s\n", pdf, thumbnail);}
+    else puts(Not Available);
+    }
+    free(epub);
+    free(pdf);
+    free(thumbnail);
+    free_collection(&col);
+    free_collection(&col1);
+    fprintf(stderr, "Error: %d\n", err);
+    books_free();
+}
 
 int main(int argc, char *argv[]){
     printf("httpGetToFile:");
     testHttpGetToFile("https://api.github.com/users/xploitedd/repos", "hello.html");
+    printf("HttpGetJsonData:\n");
     testHttpGetJsonData("https://www.googleapis.com/books/v1/volumes?q=inauthor:%22Alexandre%20Herculano%22");
-    //testgoogleBooksSearchByAuthor();
+    printf("googleBooksSearchByAuthor:\n");
+    testgoogleBooksSearchByAuthor();
+    testGoogleBooksGetUrls();
 }
