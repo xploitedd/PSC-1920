@@ -77,21 +77,26 @@ void testGoogleBooksGetUrls(){
     char *thumbnail = calloc(100, 1);
     Collection col = { 0, NULL };
     Collection col1 = { 0, NULL };
-    int err = googleBooksSearchByAuthor("AIzaSyDQcIpcRauamoUdu0s9AYKSyPJX7VjAfr8", "Camilo Castelo Branco", &col);
-    int err1 = googleBooksSearchByAuthor("AIzaSyDQcIpcRauamoUdu0s9AYKSyPJX7VjAfr8", "Alexandre Herculano", &col1);
+    int err = googleBooksSearchByAuthor("AIzaSyA49iSFry5ScpL1Ej-Zf645voHLOf-YmJg", "Camilo Castelo Branco", &col);
+    int err1 = googleBooksSearchByAuthor("AIzaSyA49iSFry5ScpL1Ej-Zf645voHLOf-YmJg", "Alexandre Herculano", &col1);
     for (int i = 0; i < col.volume_count; ++i) {
     Volume vol = col.volumes[i];
     printf("Book Name: %s\n", vol.title);
-    int errUrl = googleBooksGetUrls("AIzaSyDQcIpcRauamoUdu0s9AYKSyPJX7VjAfr8", vol.volumeId, thumbnail, 100, pdf, 100,epub,100);
-    if(errUrl == 1){printf("pdf url: %s thumbnail: %s\n", pdf, thumbnail);}
-    else puts(Not Available);
+    int errUrl = googleBooksGetUrls("AIzaSyA49iSFry5ScpL1Ej-Zf645voHLOf-YmJg", vol.volumeId, thumbnail, 100, pdf, 100,epub,100);
+    if(errUrl != -1){
+        if(vol.pdfAvailable){
+          printf("pdf url: %s thumbnail: %s\n", pdf, thumbnail);}
+        }
     }
     for (int i = 0; i < col1.volume_count; ++i) {
     Volume vol = col.volumes[i];
     printf("Book Name: %s\n", vol.title);
-    int errUrl1 = googleBooksGetUrls("AIzaSyDQcIpcRauamoUdu0s9AYKSyPJX7VjAfr8", vol.volumeId, thumbnail, 100, pdf, 100,epub,100);
-    if(errUrl == 1){printf("pdf url: %s thumbnail: %s\n", pdf, thumbnail);}
-    else puts(Not Available);
+    int errUrl1 = googleBooksGetUrls("AIzaSyA49iSFry5ScpL1Ej-Zf645voHLOf-YmJg", vol.volumeId, thumbnail, 100, pdf, 100,epub,100);
+    if(errUrl1 != -1){
+        if(vol.pdfAvailable){
+          printf("pdf url: %s thumbnail: %s\n", pdf, thumbnail);
+          }
+        }
     }
     free(epub);
     free(pdf);
@@ -103,7 +108,7 @@ void testGoogleBooksGetUrls(){
 }
 
 int main(int argc, char *argv[]){
-    printf("httpGetToFile:");
+   // printf("httpGetToFile:");
     testHttpGetToFile("https://api.github.com/users/xploitedd/repos", "hello.html");
     printf("HttpGetJsonData:\n");
     testHttpGetJsonData("https://www.googleapis.com/books/v1/volumes?q=inauthor:%22Alexandre%20Herculano%22");
