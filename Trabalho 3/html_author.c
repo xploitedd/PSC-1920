@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
                 thumb_url, vol.title, vol.volumeId, vol.identifier, vol.publishedDate);
 
             if (vol.pdfAvailable)
-                fprintf(file, "<a href=\"%s\" class=\"mt-2\">PDF Download Link</a>", pdf_url);
+                fprintf(file, "<a href=\"%s\" class=\"mt-2\">PDF Download Link</a><br>", pdf_url);
 
             if (vol.epubAvailable)
                 fprintf(file, "<a href=\"%s\" class=\"mt-2\">EPUB Download Link</a>", epub_url);
