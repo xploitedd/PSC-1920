@@ -11,33 +11,7 @@ void test_http_get_to_file() {
 
 int main(int argc, char *argv[]) {
     books_init();
-    Collection col = { 0, NULL };
-    int err = googleBooksSearchByAuthor("AIzaSyDQcIpcRauamoUdu0s9AYKSyPJX7VjAfr8", "Edgar Allan Poe", &col);
-    printf("Error ? %d Count: %ld\n", err, col.volume_count);
-    for (int i = 0; i < col.volume_count; ++i) {
-        Volume vol = col.volumes[i];
-        printf("------------------------------------\n");
-        printf("Idx:            %d\n", i);
-        printf("Id:             %s\n", vol.volumeId);
-        printf("Title:          %s\n", vol.title);
-        printf("Published Date: %s\n", vol.publishedDate);
-        printf("ISBN:           %s\n", vol.identifier);
-        printf("PDF Available:  %d\n", vol.pdfAvailable);
-        printf("EPUB Available:  %d\n", vol.epubAvailable);
-    }
-
-        char *pdf = calloc(100, 1);
-        char *epub = calloc(100, 1);
-    char *thumbnail = calloc(100, 1);
-
-    err = googleBooksGetUrls("AIzaSyDQcIpcRauamoUdu0s9AYKSyPJX7VjAfr8", "6f9SDwAAQBAJ", thumbnail, 100, pdf, 100,epub,100);
-    printf("pdf url: %s thumbnail: %s\n", pdf, thumbnail);
-    free(epub);
-    free(pdf);
-    free(thumbnail);
-    fprintf(stderr, "Error: %d\n", err);
-
-    free_collection(&col);
+    test_http_get_to_file();
     books_free();
     return 0;
 }
